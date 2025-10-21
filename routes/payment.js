@@ -182,6 +182,7 @@ router.post('/create-donation-intent', auth, async (req, res) => {
 // Find this route in your backend code (e.g., /routes/payment.js)
 router.post('/confirm-donation', auth, async (req, res) => {
   try {
+    console.log({ body: req.body, userId: req.user._id });
     // 1. Get all three fields from the body
     const { paymentIntentId, amount, paymentMethod } = req.body; 
     

@@ -1,7 +1,9 @@
-// backend/server.js
+// api/index.js
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const bodyParser = require('body-parser');
+const serverless = require('serverless-http');
 require('dotenv').config();
 
 const userRoutes = require('../routes/user');
@@ -10,48 +12,39 @@ const animeRoutes = require('../routes/anime');
 const adminRoutes = require('../routes/admin');
 const ratingRoutes = require('../routes/ratings');
 const paymentRoutes = require('../routes/payment');
+const adRoutes = require('../routes/ads');
+const adminAccountRoutes = require('../routes/adminAccount');
+const adminAuthRoutes = require('../routes/adminAuth');
+
 const stripe = require('../config/stripe');
 const Donation = require('../models/Donation');
 const User = require('../models/User');
-const bodyParser = require('body-parser');
+
 const app = express();
-const PORT = process.env.PORT || 5000;
+
 // Middleware
 app.use(cors());
-// app.use(cors({
-//   allowedHeaders: ['X-User-Auth', 'Content-Type'],
-// }));
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
 
-// Database connection
-// Make sure to set the MONGO_URI environment variable in your Cloud Run service.
-mongoose.connect('mongodb+srv://plsprakash2003:Surya_2003@cluster0.2yh1df7.mongodb.net/anime_flow?retryWrites=true&w=majority&ssl=true')
-  .then(() => console.log('Connected to MongoDB'))
-  .catch(err => console.error('MongoDB connection error:', err));
+// MongoDB connection
+mongoose
+  .connect(process.env.MONGO_URI)
+  .then(() => console.log('✅ Connected to MongoDB'))
+  .catch((err) => console.error('MongoDB connection error:', err));
 
 // Routes
-// backend/server.js (add this line)
-// backend/server.js (add ads routes)
-const adRoutes = require('../routes/ads');
-const adminAccountRoutes = require('../routes/adminAccount');
-// backend/server.js
-const adminAuthRoutes = require('../routes/adminAuth');
-
-// Add routes
 app.use('/api/admin/auth', adminAuthRoutes);
-
 app.use('/api/admin/account', adminAccountRoutes);
-
-// Add with your other routes
 app.use('/api/ads', adRoutes);
 app.use('/api/payment', paymentRoutes);
-
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/anime', animeRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/ratings', ratingRoutes);
+
+// Webhook endpoint
 app.post(
   '/webhook',
   bodyParser.raw({ type: 'application/json' }),
@@ -70,50 +63,37 @@ app.post(
       return res.status(400).send(`Webhook Error: ${err.message}`);
     }
 
-    // Handle the event
     if (event.type === 'payment_intent.succeeded') {
       const pi = event.data.object;
       const userId = pi.metadata.userId;
       const amount = pi.amount / 100;
       const paymentId = pi.id;
 
-      // Record donation
       const donation = new Donation({
         user: userId,
         amount,
         paymentMethod: 'card',
         paymentId,
-        status: 'completed'
+        status: 'completed',
       });
       await donation.save();
 
-      // Grant ad-free access
       await User.findByIdAndUpdate(userId, {
         isAdFree: true,
-        adFreeGrantedAt: new Date()
+        adFreeGrantedAt: new Date(),
       });
 
       console.log(`Donation recorded for user ${userId}: ₹${amount}`);
     }
 
-    // Return 200 to acknowledge receipt
     res.json({ received: true });
   }
 );
-app.get('/', (req, res) => {
-  res.send('Welcome to AnimeFlow API');
-});
-app.get('/health', (req, res) => {
-  res.send('Welcome to AnimeFlow API');
-});
 
-app.get('/hello', (req, res) => {
-  res.json("API is running");
-});
+app.get('/', (req, res) => res.send('Welcome to AnimeFlow API'));
+app.get('/health', (req, res) => res.send('Server is healthy ✅'));
+app.get('/hello', (req, res) => res.json('API is running'));
 
-// ✅ Start Server
-app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
-});
-
-module.exports = app;
+// ❌ REMOVE app.listen() — Vercel handles that automatically!
+// ✅ Instead export the handler
+module.exports = serverless(app);

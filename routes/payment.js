@@ -156,11 +156,6 @@ const router = express.Router();
 router.post('/create-donation-intent', auth, async (req, res) => {
   try {
     const { amount } = req.body; // Amount is expected in cents (e.g., 100 for $1.00)
-    
-    // Server-side validation of the minimum amount
-    if (amount < 100) { // Minimum $1.00 donation = 100 cents
-      return res.status(400).json({ message: 'Minimum donation amount is 100 cents ($1.00)' });
-    }
 
     const paymentIntent = await stripe.paymentIntents.create({
       amount: amount, // Use the amount in cents

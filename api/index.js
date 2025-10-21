@@ -4,18 +4,18 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 require('dotenv').config();
 
-const userRoutes = require('./routes/user');
-const authRoutes = require('./routes/auth');
-const animeRoutes = require('./routes/anime');
-const adminRoutes = require('./routes/admin');
-const ratingRoutes = require('./routes/ratings');
-const paymentRoutes = require('./routes/payment');
-const stripe = require('./config/stripe');
-const Donation = require('./models/Donation');
-const User = require('./models/User');
+const userRoutes = require('../routes/user');
+const authRoutes = require('../routes/auth');
+const animeRoutes = require('../routes/anime');
+const adminRoutes = require('../routes/admin');
+const ratingRoutes = require('../routes/ratings');
+const paymentRoutes = require('../routes/payment');
+const stripe = require('../config/stripe');
+const Donation = require('../models/Donation');
+const User = require('../models/User');
 const bodyParser = require('body-parser');
 const app = express();
-
+const PORT = process.env.PORT || 5000;
 // Middleware
 app.use(cors());
 // app.use(cors({
@@ -33,10 +33,10 @@ mongoose.connect('mongodb+srv://plsprakash2003:Surya_2003@cluster0.2yh1df7.mongo
 // Routes
 // backend/server.js (add this line)
 // backend/server.js (add ads routes)
-const adRoutes = require('./routes/ads');
-const adminAccountRoutes = require('./routes/adminAccount');
+const adRoutes = require('../routes/ads');
+const adminAccountRoutes = require('../routes/adminAccount');
 // backend/server.js
-const adminAuthRoutes = require('./routes/adminAuth');
+const adminAuthRoutes = require('../routes/adminAuth');
 
 // Add routes
 app.use('/api/admin/auth', adminAuthRoutes);
@@ -107,8 +107,13 @@ app.get('/health', (req, res) => {
   res.send('Welcome to AnimeFlow API');
 });
 
-const PORT = process.env.PORT || 8080;
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`✅ Server running on port ${PORT}`);
+app.get('/hello', (req, res) => {
+  res.json("API is running");
 });
 
+// ✅ Start Server
+app.listen(PORT, () => {
+  console.log(`Server running at http://localhost:${PORT}`);
+});
+
+module.exports = app;

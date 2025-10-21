@@ -3,18 +3,14 @@ const express = require('express');
 const adminController = require('../controllers/adminController');
 const auth = require('../middleware/auth');
 const admin = require('../middleware/admin');
-const multer = require('multer');
 
 const router = express.Router();
 
-const storage = multer.diskStorage({
-  destination: 'uploads/',
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + '-' + file.originalname);
-  }
-});
+// In your admin.js or a separate multer-config.js
+const multer = require('multer');
 
-const upload = multer({ storage });
+// Use memoryStorage to hold the file as a buffer
+const upload = multer({ storage: multer.memoryStorage() });
 
 router.post('/anime', [auth, admin], adminController.createAnime);
 router.put('/anime/:id', [auth, admin], adminController.updateAnime);

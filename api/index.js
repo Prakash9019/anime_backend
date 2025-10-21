@@ -3,7 +3,6 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const bodyParser = require('body-parser');
-const serverless = require('serverless-http');
 require('dotenv').config();
 
 const userRoutes = require('../routes/user');
@@ -94,6 +93,10 @@ app.get('/', (req, res) => res.send('Welcome to AnimeFlow API'));
 app.get('/health', (req, res) => res.send('Server is healthy ✅'));
 app.get('/hello', (req, res) => res.json('API is running'));
 
-// ❌ REMOVE app.listen() — Vercel handles that automatically!
-// ✅ Instead export the handler
-module.exports = serverless(app);
+// ✅ Use the port Render provides, or 3001 for local testing
+const PORT = process.env.PORT || 3001;
+
+// ✅ Listen on 0.0.0.0 to accept connections from Render's proxy
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`✅ Server listening on port ${PORT}`);
+});

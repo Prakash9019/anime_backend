@@ -179,40 +179,40 @@ router.post('/create-donation-intent', auth, async (req, res) => {
   }
 });
 
-// 2. Confirm donation and grant ad-free access (Called by PaymentModal.tsx after successful client confirmation)
+// Find this route in your backend code (e.g., /routes/payment.js)
 router.post('/confirm-donation', auth, async (req, res) => {
   try {
-       console.log("heeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee")
-    const { paymentIntentId, amount } = req.body; // amount here is the dollar amount for logging/display
-       console.log("heeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee")
-      console.log("Confirm Donation Request:", { paymentIntentId, amount, userId: req.user._id });
-       console.log("heeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee")
-    // 1. Verify payment with Stripe
-    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-       console.log("heeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee")
+    // 1. Get all three fields from the body
+    const { paymentIntentId, amount, paymentMethod } = req.body; 
     
-    // Check if the status is 'succeeded' and the amount matches (optional but recommended)
+    console.log("Confirm Donation Request:", { paymentIntentId, amount, paymentMethod, userId: req.user._id });
+
+    // 2. Verify payment with Stripe
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    
     if (paymentIntent.status === 'succeeded' && paymentIntent.amount === Math.round(amount * 100)) { 
       
-      // 2. Create donation record
+      // 3. Create donation record with the CORRECT fields
       const donation = new Donation({
         user: req.user._id,
-        amount: amount, // Store the dollar amount
-        paymentIntentId: paymentIntentId,
+        amount: amount,
+        paymentId: paymentIntentId,     // <-- FIX 1: Use paymentIntentId for the 'paymentId' path
+        paymentMethod: paymentMethod,   // <-- FIX 2: Add the 'paymentMethod' path
         status: 'completed'
       });
-      await donation.save();
+      
+      await donation.save(); // This will now succeed
+      
       console.log(`Donation recorded for user ${req.user._id}: $${amount}`);
-      // 3. Grant ad-free access
-       console.log("heeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee")
+
+      // 4. Grant ad-free access
       await User.findByIdAndUpdate(req.user._id, {
         isAdFree: true,
         adFreeGrantedAt: new Date()
       });
-       console.log("heeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee")
+      
       res.json({ message: 'Donation confirmed and ad-free access granted' });
     } else {
-      // Log the unexpected status or mismatch
       res.status(400).json({ message: `Payment not completed. Status: ${paymentIntent.status}` });
     }
   } catch (error) {

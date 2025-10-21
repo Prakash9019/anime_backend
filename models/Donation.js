@@ -14,7 +14,7 @@ const donationSchema = new mongoose.Schema({
   },
   paymentMethod: {
     type: String,
-    enum: ['card', 'upi'],
+    enum: ['card', 'upi','sheet'],
     required: true,
   },
   paymentId: {

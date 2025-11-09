@@ -2,6 +2,9 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const { validationResult } = require('express-validator');
+// controllers/authController.js (replace existing googleAuth)
+const { OAuth2Client } = require('google-auth-library');
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID); // set this in .env
 
 const jwksClient = require('jwks-rsa');
 const generateToken = (userId) => {
@@ -71,17 +74,56 @@ exports.login = async (req, res) => {
 
 exports.googleAuth = async (req, res) => {
   try {
-    const { googleId, name, email, avatar } = req.body;
+    const { idToken } = req.body;
+    if (!idToken) {
+      return res.status(400).json({ message: 'idToken is required' });
+    }
 
+    // Verify token with Google
+    let ticket;
+    try {
+      ticket = await client.verifyIdToken({
+        idToken,
+        audience: process.env.GOOGLE_CLIENT_ID, // verify audience
+      });
+    } catch (err) {
+      console.error('Google token verification failed', err);
+      return res.status(401).json({ message: 'Invalid Google idToken' });
+    }
+
+    const payload = ticket.getPayload();
+    // payload fields: sub (user id), email, name, picture, email_verified
+    const googleId = payload.sub;
+    const email = payload.email;
+    const name = payload.name || '';
+    const avatar = payload.picture || null;
+    const emailVerified = payload.email_verified;
+
+    if (!googleId) {
+      return res.status(400).json({ message: 'Invalid Google payload (no sub)' });
+    }
+
+    // Find or create user
     let user = await User.findOne({ $or: [{ googleId }, { email }] });
 
     if (!user) {
-      user = new User({ googleId, name, email, avatar });
+      user = new User({
+        googleId,
+        name,
+        email,
+        avatar,
+      });
       await user.save();
+    } else {
+      // attach googleId if matched by email but no googleId saved
+      if (!user.googleId) {
+        user.googleId = googleId;
+        await user.save();
+      }
     }
 
     const token = generateToken(user._id);
-    res.json({
+    return res.json({
       token,
       user: {
         id: user._id,
@@ -92,6 +134,7 @@ exports.googleAuth = async (req, res) => {
       },
     });
   } catch (error) {
+    console.error('googleAuth error', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
@@ -99,7 +142,7 @@ exports.googleAuth = async (req, res) => {
 const APPLE_ISS = 'https://appleid.apple.com';
 const APPLE_JWKS_URL = `${APPLE_ISS}/auth/keys`;
 
-const client = jwksClient({
+const client1 = jwksClient({
   jwksUri: APPLE_JWKS_URL,
   cache: true,
   cacheMaxEntries: 5,
@@ -111,7 +154,7 @@ const client = jwksClient({
  */
 function getSigningKey(kid) {
   return new Promise((resolve, reject) => {
-    client.getSigningKey(kid, (err, key) => {
+    client1.getSigningKey(kid, (err, key) => {
       if (err) return reject(err);
       const signingKey = key.getPublicKey();
       resolve(signingKey);

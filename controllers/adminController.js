@@ -86,23 +86,27 @@ exports.syncEpisodesFromJikan = async (req, res) => {
 };
 
 // backend/controllers/adminController.js
+const User = require('../models/User');
+const Rating = require('../models/Rating');
+// const Download = require('../models/Download');
+
 exports.getStats = async (req, res) => {
   try {
     console.log('Fetching stats...');
-    const User = require('../models/User');
-    const Rating = require('../models/Rating');
-    // const Download = require('../models/Download'); // assume you track downloads
 
-    const userLogins = await User.countDocuments(); 
+    const userLogins = await User.countDocuments();
     const ratingsSubmitted = await Rating.countDocuments();
     // const userDownloads = await Download.countDocuments();
-    console.log(userLogins, ratingsSubmitted, userDownloads);
+
+    console.log(userLogins, ratingsSubmitted /*, userDownloads */);
+
     res.json({
       userLogins,
       ratingsSubmitted,
       // userDownloads,
     });
   } catch (err) {
-    res.status(500).json(err);
+    console.error(err);
+    res.status(500).json({ message: 'Failed to fetch stats', error: err.message });
   }
 };

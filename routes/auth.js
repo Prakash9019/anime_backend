@@ -58,4 +58,7 @@ router.post('/admin-login', async (req, res) => {
 // Google Auth
 router.post('/google', authController.googleAuth);
 
+
+router.post('/apple', authController.appleAuth);
+
 module.exports = router;
